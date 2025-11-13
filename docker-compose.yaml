@@ -1,0 +1,57 @@
+services:
+  wiki_apache:
+    container_name: "wiki_apache"
+    image: wiki/apache:0.1
+    build:
+      dockerfile: ./conf/apache/apache.Dockerfile
+    ports:
+      - 443:443
+    volumes:
+      #apache conf
+      - ./conf/apache/httpd.conf:/usr/local/apache2/conf/httpd.conf
+      #our self-signed certificates
+      - ./conf/certificates/:/etc/ssl_certificates
+      #base html
+      - ./html:/var/www/html
+
+    env_file:
+      - ./conf/primary.env
+
+    depends_on:
+      - wiki_app
+      - wiki_db
+    restart: unless-stopped
+
+  wiki_app:
+    container_name: "wiki_app"
+    image: mediawiki:1.38.4
+    restart: unless-stopped
+    env_file:
+      - ./conf/primary.env
+
+    volumes:
+      - ./data/media_wiki/images:/var/www/html/images
+      - ./data/media_wiki/uploads:/var/www/html/uploads
+      # After initial setup, uncomment the line below
+      #- ./conf/wiki/LocalSettings.php:/var/www/html/LocalSettings.php
+      
+      #to allow larger file sizes
+      - ./conf/wiki/.htaccess:/var/www/html/.htaccess
+
+    depends_on:
+      - wiki_db
+
+
+  wiki_db:
+    container_name: "wiki_db"
+    image: mariadb:10.10.2
+    env_file:
+      - ./conf/primary.env    
+    restart: unless-stopped
+    environment:
+      MYSQL_RANDOM_ROOT_PASSWORD: 'yes'
+    volumes:
+      - ./data/media_wiki/db:/var/lib/mysql
+
+
+
